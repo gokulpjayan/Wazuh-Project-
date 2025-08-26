@@ -5,9 +5,7 @@ OBJECTIVE -
 SETUP - 
 
   Wazuh Manager: Server running in VMware
-
   Agent: Windows 10 host (DESKTOP-GSG0OEO)
-
   Monitored Path: c:\users\ACER\Desktop
 
 ATTACK / SIMULATION STEPS - 
@@ -59,14 +57,11 @@ ATTACK / SIMULATION STEPS -
 OBSERVATION - 
 
   Wazuh successfully detected all three events (added, modified, deleted) with corresponding rule IDs and alert levels.
-
   This validates that FIM is working as expected on the Windows agent.
-
   Alerts were forwarded to the Wazuh dashboard for visibility and correlation.
 
 DETECTION USE CASE - 
 
   MITRE ATT&CK: T1070.004 – Indicator Removal on Host: File Deletion
-
   Use Case: Detecting unauthorized modifications or deletions of critical files in monitored directories.
   

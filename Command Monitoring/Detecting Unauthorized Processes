@@ -1,0 +1,50 @@
+OBJECTIVE - 
+  
+To demonstrate how Wazuh process monitoring detects the execution of suspicious tools (e.g., ncat.exe) on an endpoint.
+
+SETUP - 
+
+  Wazuh Manager: Server running in VMware
+  Agent: Windows 10 host (DESKTOP-GSG0OEO)
+  Monitored Command: tasklist executed periodically by Wazuh agent to capture running processes
+
+ATTACK / SIMULATION STEPS - 
+
+  Suspicious Tool Execution : 
+
+    Executed ncat.exe on the Windows agent (a tool often used by attackers for reverse shells or network pivoting).
+    Wazuh process monitoring collected process information via the tasklist command.
+    The tool was identified as suspicious based on a custom detection rule.
+
+EVENT DETECTED - 
+
+    Timestamp: Aug 26, 2025 @ 19:45:40.353
+    Agent: DESKTOP-GSG0OEO (192.168.1.5)
+    Process Detected: ncat.exe
+    Location: C:\Windows\System32\tasklist.exe
+    Rule ID: 100010
+    Rule Description: Suspicious tool detected in process list
+    Alert Level: 10
+
+
+    Full Log Extract:
+
+      ossec: output: 'C:\Windows\System32\tasklist.exe': 
+      ncat.exe    11196 Console    1    7,348 K
+
+OBSERVATION - 
+
+  Wazuh successfully identified the execution of ncat.exe as a suspicious process.
+  The alert was triggered with Rule ID 100010 and Level 10, indicating a high-severity detection.
+  This validates that the process monitoring and custom rules are effective in detecting potentially malicious activity.
+  The alert was forwarded to the Wazuh dashboard for visibility, investigation, and response.
+
+DETECTION USE CASE - 
+
+  MITRE ATT&CK:
+
+    T1059.003 – Command and Scripting Interpreter: Windows Command Shell
+    T1105 – Ingress Tool Transfer (when attacker transfers tools like netcat/ncat)
+    T1057 – Process Discovery (using tasklist to enumerate running processes)
+
+  Use Case: Detecting execution of known attacker utilities (like netcat/ncat) that can be used for backdoors, tunneling, or unauthorized network communications.

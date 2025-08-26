@@ -1,0 +1,62 @@
+OBJECTIVE - 
+
+  To demonstrate how Wazuh detects brute force authentication attempts on a Windows endpoint through repeated logon failures.
+
+SETUP - 
+
+  Wazuh Manager: Server running in VMware
+  Agent: Windows 10 host (DESKTOP-GSG0OEO)
+  Monitored Source: Windows Security Event Logs
+  Test User: baduser
+
+ATTACK / SIMULATION STEPS -
+
+  1. SMB Brute Force with Hydra
+
+    Ran Hydra from Kali against Windows SMB service:
+    hydra -l baduser -P passwords.txt smb://192.168.1.5
+    Generated multiple failed authentication attempts for baduser.
+
+  2. Multiple Local Logon Failures with runas
+
+    Simulated repeated logon failures locally with PowerShell:
+
+    for ($i=0; $i -lt 10; $i++) {
+        runas /user:baduser "cmd.exe"
+    }
+
+EVENTS DETECTED - 
+
+  Individual Failures:
+
+    Time: Aug 26, 2025 @ 15:18:03 – 15:18:12
+    Agent: DESKTOP-GSG0OEO
+    Rule ID: 60122
+    Level: 5
+    Description: Logon Failure – Unknown user or bad password
+
+  Correlation (Brute Force):
+
+    Time: Aug 26, 2025 @ 15:18:13
+    Agent: DESKTOP-GSG0OEO
+    Rule ID: 60204
+    Level: 10
+    Description: Multiple Windows Logon Failures
+
+OBSERVATION - 
+
+  Wazuh detected each failed authentication attempt individually (Rule 60122).
+  After repeated failures, Wazuh correlated the events into a brute force detection (Rule 60204, level 10).
+  This shows Wazuh’s ability to escalate severity when multiple related events occur in short succession.
+  Alerts were forwarded to the dashboard for visibility and investigation.
+
+DETECTION USE CASE - 
+
+  MITRE ATT&CK:
+
+    T1110 – Brute Force
+    T1078 – Valid Accounts (if an attacker eventually succeeds)
+
+  Use Case:
+
+    Detecting brute force attempts via both network (SMB) and local logon failures (runas), helping defenders identify password-guessing attacks before they succeed.

